@@ -335,6 +335,12 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -350,7 +356,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-6 space-y-6">
           {error && (
             <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg">{error}</div>
           )}

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink } from 'lucide-react';
+import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink, Pencil } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AddRestaurantModal } from './components/AddRestaurantModal';
+import { EditHappyHourModal } from './components/EditHappyHourModal';
 import type { DealItem, DealListValue, RestaurantWithHappyHours, HappyHour } from './types';
 import { DAYS_OF_WEEK } from './types';
 
@@ -84,13 +85,25 @@ function DealList({
   );
 }
 
-function HappyHourCard({ happyHour }: { happyHour: HappyHour }) {
+function HappyHourCard({ happyHour, onEdit }: { happyHour: HappyHour; onEdit?: () => void }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 mt-2">
-      <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
-        <Clock className="w-4 h-4 text-blue-600" />
-        {DAYS_OF_WEEK[happyHour.day_of_week]}: {formatTime(happyHour.start_time)} -{' '}
-        {formatTime(happyHour.end_time)}
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+          <Clock className="w-4 h-4 text-blue-600" />
+          {DAYS_OF_WEEK[happyHour.day_of_week]}: {formatTime(happyHour.start_time)} -{' '}
+          {formatTime(happyHour.end_time)}
+        </div>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-800"
+            title="Edit happy hour"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <DealList deals={happyHour.drink_deals} icon={Wine} iconClassName="text-red-500" />
       <DealList deals={happyHour.food_deals} icon={Utensils} iconClassName="text-orange-500" />
@@ -109,6 +122,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mapClickCoords, setMapClickCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithHappyHours | null>(null);
+  const [editingHappyHour, setEditingHappyHour] = useState<HappyHour | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -127,7 +141,13 @@ function App() {
       .order('created_at', { ascending: false });
 
     if (!error && restaurantsData) {
-      setRestaurants(restaurantsData as RestaurantWithHappyHours[]);
+      const nextRestaurants = restaurantsData as RestaurantWithHappyHours[];
+      setRestaurants(nextRestaurants);
+      setSelectedRestaurant((currentRestaurant) =>
+        currentRestaurant
+          ? nextRestaurants.find((restaurant) => restaurant.id === currentRestaurant.id) ?? null
+          : null
+      );
     }
   }
 
@@ -270,7 +290,11 @@ function App() {
                       <div className="mt-3">
                         <h4 className="font-semibold text-sm text-gray-700 mb-2">Happy Hours</h4>
                         {restaurant.happy_hours.map((hh) => (
-                          <HappyHourCard key={hh.id} happyHour={hh} />
+                          <HappyHourCard
+                            key={hh.id}
+                            happyHour={hh}
+                            onEdit={() => setEditingHappyHour(hh)}
+                          />
                         ))}
                       </div>
                     ) : (
@@ -319,7 +343,11 @@ function App() {
                 <div>
                   <h4 className="font-semibold text-gray-800 mb-2">Happy Hours</h4>
                   {selectedRestaurant.happy_hours.map((hh) => (
-                    <HappyHourCard key={hh.id} happyHour={hh} />
+                    <HappyHourCard
+                      key={hh.id}
+                      happyHour={hh}
+                      onEdit={() => setEditingHappyHour(hh)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -350,6 +378,13 @@ function App() {
           fetchRestaurants();
         }}
         initialCoords={mapClickCoords}
+      />
+      <EditHappyHourModal
+        happyHour={editingHappyHour}
+        onClose={() => setEditingHappyHour(null)}
+        onSuccess={async () => {
+          await fetchRestaurants();
+        }}
       />
 
       <style>{`
