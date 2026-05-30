@@ -117,6 +117,63 @@ function HappyHourCard({ happyHour, onEdit }: { happyHour: HappyHour; onEdit?: (
   );
 }
 
+function HappyHoursForSelectedDay({
+  happyHours,
+  onEdit,
+  compact = false,
+}: {
+  happyHours: HappyHour[];
+  onEdit: (happyHour: HappyHour) => void;
+  compact?: boolean;
+}) {
+  const availableDays = Array.from(new Set(happyHours.map((hh) => hh.day_of_week))).sort(
+    (a, b) => a - b
+  );
+  const defaultDay = availableDays.includes(1) ? 1 : availableDays[0];
+  const [selectedDay, setSelectedDay] = useState(defaultDay);
+
+  useEffect(() => {
+    setSelectedDay(defaultDay);
+  }, [defaultDay]);
+
+  const filteredHappyHours = happyHours.filter((hh) => hh.day_of_week === selectedDay);
+
+  if (happyHours.length === 0) {
+    return <p className="text-sm text-gray-500">No happy hour info added yet.</p>;
+  }
+
+  return (
+    <div>
+      <h4 className={`font-semibold text-gray-800 ${compact ? 'mb-2 text-sm' : 'mb-2'}`}>
+        Happy Hours
+      </h4>
+      <div className="mb-2 flex flex-wrap gap-1">
+        {availableDays.map((day) => {
+          const isSelected = day === selectedDay;
+
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(day)}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                isSelected
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {DAYS_OF_WEEK[day].slice(0, 3)}
+            </button>
+          );
+        })}
+      </div>
+      {filteredHappyHours.map((hh) => (
+        <HappyHourCard key={hh.id} happyHour={hh} onEdit={() => onEdit(hh)} />
+      ))}
+    </div>
+  );
+}
+
 function App() {
   const [restaurants, setRestaurants] = useState<RestaurantWithHappyHours[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -286,20 +343,13 @@ function App() {
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{restaurant.address}</p>
 
-                    {restaurant.happy_hours.length > 0 ? (
-                      <div className="mt-3">
-                        <h4 className="font-semibold text-sm text-gray-700 mb-2">Happy Hours</h4>
-                        {restaurant.happy_hours.map((hh) => (
-                          <HappyHourCard
-                            key={hh.id}
-                            happyHour={hh}
-                            onEdit={() => setEditingHappyHour(hh)}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 mt-3">No happy hour info added yet.</p>
-                    )}
+                    <div className="mt-3">
+                      <HappyHoursForSelectedDay
+                        happyHours={restaurant.happy_hours}
+                        onEdit={setEditingHappyHour}
+                        compact
+                      />
+                    </div>
 
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -339,20 +389,10 @@ function App() {
               </div>
               <p className="text-sm text-gray-600 mb-3">{selectedRestaurant.address}</p>
 
-              {selectedRestaurant.happy_hours.length > 0 ? (
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Happy Hours</h4>
-                  {selectedRestaurant.happy_hours.map((hh) => (
-                    <HappyHourCard
-                      key={hh.id}
-                      happyHour={hh}
-                      onEdit={() => setEditingHappyHour(hh)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No happy hour info added yet.</p>
-              )}
+              <HappyHoursForSelectedDay
+                happyHours={selectedRestaurant.happy_hours}
+                onEdit={setEditingHappyHour}
+              />
 
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
