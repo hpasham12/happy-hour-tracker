@@ -1,3 +1,10 @@
+export interface DealItem {
+  name: string;
+  price?: string;
+}
+
+export type DealListValue = DealItem[] | string | null;
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -14,8 +21,8 @@ export interface HappyHour {
   day_of_week: number;
   start_time: string;
   end_time: string;
-  food_deals: string;
-  drink_deals: string;
+  food_deals: DealListValue;
+  drink_deals: DealListValue;
   daily_specials: string;
   created_at: string;
 }

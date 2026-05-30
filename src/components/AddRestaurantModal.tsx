@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { DAYS_OF_WEEK } from '../types';
+import { DAYS_OF_WEEK, type DealItem } from '../types';
 
 interface AddRestaurantModalProps {
   isOpen: boolean;
@@ -14,8 +14,8 @@ interface HappyHourInput {
   day_of_week: number;
   start_time: string;
   end_time: string;
-  food_deals: string;
-  drink_deals: string;
+  food_deals: DealItem[];
+  drink_deals: DealItem[];
   daily_specials: string;
 }
 
@@ -25,6 +25,79 @@ interface SearchResult {
   lon: string;
   name?: string;
   type: string;
+}
+
+type DealField = 'food_deals' | 'drink_deals';
+
+const emptyDeal = (): DealItem => ({ name: '', price: '' });
+
+function cleanDeals(deals: DealItem[]) {
+  return deals
+    .map((deal) => ({
+      name: deal.name.trim(),
+      price: deal.price?.trim() ?? '',
+    }))
+    .filter((deal) => deal.name);
+}
+
+function DealRows({
+  title,
+  deals,
+  onAdd,
+  onRemove,
+  onChange,
+  itemPlaceholder,
+}: {
+  title: string;
+  deals: DealItem[];
+  onAdd: () => void;
+  onRemove: (dealIndex: number) => void;
+  onChange: (dealIndex: number, field: keyof DealItem, value: string) => void;
+  itemPlaceholder: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <label className="block text-sm font-medium text-gray-700">{title}</label>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+        >
+          <Plus className="h-4 w-4" />
+          Add Item
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {deals.map((deal, dealIndex) => (
+          <div key={dealIndex} className="grid grid-cols-[minmax(0,1fr)_7rem_2rem] gap-2">
+            <input
+              type="text"
+              value={deal.name}
+              onChange={(e) => onChange(dealIndex, 'name', e.target.value)}
+              placeholder={itemPlaceholder}
+              className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              value={deal.price ?? ''}
+              onChange={(e) => onChange(dealIndex, 'price', e.target.value)}
+              placeholder="$"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(dealIndex)}
+              className="flex h-10 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-gray-200"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }: AddRestaurantModalProps) {
@@ -124,8 +197,8 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
         day_of_week: 0,
         start_time: '16:00',
         end_time: '18:00',
-        food_deals: '',
-        drink_deals: '',
+        food_deals: [emptyDeal()],
+        drink_deals: [emptyDeal()],
         daily_specials: '',
       },
     ]);
@@ -135,9 +208,46 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     setHappyHours(happyHours.filter((_, i) => i !== index));
   };
 
-  const updateHappyHour = (index: number, field: keyof HappyHourInput, value: string | number) => {
+  const updateHappyHour = (
+    index: number,
+    field: 'day_of_week' | 'start_time' | 'end_time' | 'daily_specials',
+    value: string | number
+  ) => {
     const updated = [...happyHours];
     updated[index] = { ...updated[index], [field]: value };
+    setHappyHours(updated);
+  };
+
+  const addDeal = (happyHourIndex: number, field: DealField) => {
+    const updated = [...happyHours];
+    updated[happyHourIndex] = {
+      ...updated[happyHourIndex],
+      [field]: [...updated[happyHourIndex][field], emptyDeal()],
+    };
+    setHappyHours(updated);
+  };
+
+  const removeDeal = (happyHourIndex: number, field: DealField, dealIndex: number) => {
+    const updated = [...happyHours];
+    const nextDeals = updated[happyHourIndex][field].filter((_, index) => index !== dealIndex);
+    updated[happyHourIndex] = {
+      ...updated[happyHourIndex],
+      [field]: nextDeals.length > 0 ? nextDeals : [emptyDeal()],
+    };
+    setHappyHours(updated);
+  };
+
+  const updateDeal = (
+    happyHourIndex: number,
+    field: DealField,
+    dealIndex: number,
+    dealField: keyof DealItem,
+    value: string
+  ) => {
+    const updated = [...happyHours];
+    const nextDeals = [...updated[happyHourIndex][field]];
+    nextDeals[dealIndex] = { ...nextDeals[dealIndex], [dealField]: value };
+    updated[happyHourIndex] = { ...updated[happyHourIndex], [field]: nextDeals };
     setHappyHours(updated);
   };
 
@@ -169,7 +279,12 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
       if (happyHours.length > 0) {
         const { error: happyHoursError } = await supabase.from('happy_hours').insert(
           happyHours.map((hh) => ({
-            ...hh,
+            day_of_week: hh.day_of_week,
+            start_time: hh.start_time,
+            end_time: hh.end_time,
+            food_deals: cleanDeals(hh.food_deals),
+            drink_deals: cleanDeals(hh.drink_deals),
+            daily_specials: hh.daily_specials,
             restaurant_id: restaurant.id,
           }))
         );
@@ -355,35 +470,27 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Food Deals
-                    </label>
-                    <input
-                      type="text"
-                      value={hh.food_deals}
-                      onChange={(e) =>
-                        updateHappyHour(index, 'food_deals', e.target.value)
-                      }
-                      placeholder="e.g., Half-price appetizers"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                  <DealRows
+                    title="Food Deals"
+                    deals={hh.food_deals}
+                    onAdd={() => addDeal(index, 'food_deals')}
+                    onRemove={(dealIndex) => removeDeal(index, 'food_deals', dealIndex)}
+                    onChange={(dealIndex, field, value) =>
+                      updateDeal(index, 'food_deals', dealIndex, field, value)
+                    }
+                    itemPlaceholder="e.g., Half-price appetizers"
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Drink Deals
-                    </label>
-                    <input
-                      type="text"
-                      value={hh.drink_deals}
-                      onChange={(e) =>
-                        updateHappyHour(index, 'drink_deals', e.target.value)
-                      }
-                      placeholder="e.g., $5 drafts, $7 cocktails"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                  <DealRows
+                    title="Drink Deals"
+                    deals={hh.drink_deals}
+                    onAdd={() => addDeal(index, 'drink_deals')}
+                    onRemove={(dealIndex) => removeDeal(index, 'drink_deals', dealIndex)}
+                    onChange={(dealIndex, field, value) =>
+                      updateDeal(index, 'drink_deals', dealIndex, field, value)
+                    }
+                    itemPlaceholder="e.g., Draft beer"
+                  />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

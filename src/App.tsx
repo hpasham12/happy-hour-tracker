@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AddRestaurantModal } from './components/AddRestaurantModal';
-import type { RestaurantWithHappyHours, HappyHour } from './types';
+import type { DealItem, DealListValue, RestaurantWithHappyHours, HappyHour } from './types';
 import { DAYS_OF_WEEK } from './types';
 
 const customIcon = new Icon({
@@ -43,6 +43,47 @@ function formatTime(time: string): string {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
+function normalizeDealItems(deals: DealListValue): DealItem[] {
+  if (!deals) return [];
+
+  if (typeof deals === 'string') {
+    const trimmed = deals.trim();
+    return trimmed ? [{ name: trimmed }] : [];
+  }
+
+  return deals.filter((deal) => deal.name.trim());
+}
+
+function DealList({
+  deals,
+  icon: IconComponent,
+  iconClassName,
+}: {
+  deals: DealListValue;
+  icon: typeof Wine;
+  iconClassName: string;
+}) {
+  const items = normalizeDealItems(deals);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="flex items-start gap-2 text-sm text-gray-700 mt-1">
+      <IconComponent className={`w-4 h-4 flex-shrink-0 mt-0.5 ${iconClassName}`} />
+      <ul className="min-w-0 flex-1 space-y-1">
+        {items.map((deal, index) => (
+          <li key={`${deal.name}-${index}`} className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 flex-1 break-words">{deal.name}</span>
+            {deal.price && (
+              <span className="flex-shrink-0 font-medium text-gray-900">{deal.price}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function HappyHourCard({ happyHour }: { happyHour: HappyHour }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 mt-2">
@@ -51,18 +92,8 @@ function HappyHourCard({ happyHour }: { happyHour: HappyHour }) {
         {DAYS_OF_WEEK[happyHour.day_of_week]}: {formatTime(happyHour.start_time)} -{' '}
         {formatTime(happyHour.end_time)}
       </div>
-      {happyHour.drink_deals && (
-        <div className="flex items-start gap-2 text-sm text-gray-700 mt-1">
-          <Wine className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-          <span>{happyHour.drink_deals}</span>
-        </div>
-      )}
-      {happyHour.food_deals && (
-        <div className="flex items-start gap-2 text-sm text-gray-700 mt-1">
-          <Utensils className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-          <span>{happyHour.food_deals}</span>
-        </div>
-      )}
+      <DealList deals={happyHour.drink_deals} icon={Wine} iconClassName="text-red-500" />
+      <DealList deals={happyHour.food_deals} icon={Utensils} iconClassName="text-orange-500" />
       {happyHour.daily_specials && (
         <div className="flex items-start gap-2 text-sm text-gray-700 mt-1">
           <Star className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
