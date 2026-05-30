@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DAYS_OF_WEEK, type DealItem } from '../types';
+import { formatAddress, type StructuredAddress } from '../utils/address';
 
 interface AddRestaurantModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface SearchResult {
   display_name: string;
   lat: string;
   lon: string;
+  address?: StructuredAddress;
   name?: string;
   type: string;
 }
@@ -181,10 +183,10 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   const selectSearchResult = (result: SearchResult) => {
     const parts = result.display_name.split(', ');
     const restaurantName = parts[0];
-    const fullAddress = result.display_name;
+    const formattedAddress = formatAddress(result);
 
     setName(restaurantName);
-    setAddress(fullAddress);
+    setAddress(formattedAddress);
     setLatitude(parseFloat(result.lat).toFixed(6));
     setLongitude(parseFloat(result.lon).toFixed(6));
     setSearchQuery('');
@@ -400,7 +402,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                           {result.display_name.split(', ')[0]}
                         </p>
                         <p className="text-sm text-gray-500 truncate">
-                          {result.display_name}
+                          {formatAddress(result)}
                         </p>
                       </div>
                     </button>

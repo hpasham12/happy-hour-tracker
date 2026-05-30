@@ -8,6 +8,7 @@ import { AddRestaurantModal } from './components/AddRestaurantModal';
 import { EditHappyHourModal } from './components/EditHappyHourModal';
 import type { DealItem, DealListValue, RestaurantWithHappyHours, HappyHour } from './types';
 import { DAYS_OF_WEEK } from './types';
+import { formatAddress } from './utils/address';
 
 const customIcon = new Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -42,6 +43,10 @@ function formatTime(time: string): string {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${minutes} ${ampm}`;
+}
+
+function displayAddress(address: string) {
+  return formatAddress({ display_name: address });
 }
 
 function normalizeDealItems(deals: DealListValue): DealItem[] {
@@ -276,7 +281,7 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{restaurant.address}</p>
+                    <p className="text-sm text-gray-600 mt-1">{displayAddress(restaurant.address)}</p>
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                       <MapPin className="w-3 h-3" />
                       <span>
@@ -341,7 +346,7 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{restaurant.address}</p>
+                    <p className="text-sm text-gray-600 mt-1">{displayAddress(restaurant.address)}</p>
 
                     <div className="mt-3">
                       <HappyHoursForSelectedDay
@@ -387,7 +392,7 @@ function App() {
                   ×
                 </button>
               </div>
-              <p className="text-sm text-gray-600 mb-3">{selectedRestaurant.address}</p>
+              <p className="text-sm text-gray-600 mb-3">{displayAddress(selectedRestaurant.address)}</p>
 
               <HappyHoursForSelectedDay
                 happyHours={selectedRestaurant.happy_hours}
