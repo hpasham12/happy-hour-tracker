@@ -133,7 +133,6 @@ function App() {
 
   const handleMapClick = (lat: number, lng: number) => {
     setMapClickCoords({ lat, lng });
-    setIsModalOpen(true);
   };
 
   const handleModalClose = () => {
@@ -147,8 +146,8 @@ function App() {
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Chi Happy Hours</h1>
-            <p className="text-sm text-gray-500">Track the best happy hour deals in Chicagoland</p>
+            <h1 className="text-2xl font-bold text-gray-900">Happy Hours</h1>
+            <p className="text-sm text-gray-500">Track the best happy hour deals</p>
           </div>
           <button
             onClick={() => {
@@ -233,7 +232,7 @@ function App() {
         )}
 
         {/* Map */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative z-0">
           <MapContainer
             center={[41.8781, -87.6298]}
             zoom={11}

@@ -113,6 +113,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [copyFirstHappyHourDays, setCopyFirstHappyHourDays] = useState<number[]>([]);
 
   useEffect(() => {
     if (initialCoords) {
@@ -131,6 +132,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     setError('');
     setSearchQuery('');
     setSearchResults([]);
+    setCopyFirstHappyHourDays([]);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -191,6 +193,10 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   };
 
   const addHappyHour = () => {
+    if (happyHours.length > 0) {
+      setCopyFirstHappyHourDays([]);
+    }
+
     setHappyHours([
       ...happyHours,
       {
@@ -206,6 +212,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
 
   const removeHappyHour = (index: number) => {
     setHappyHours(happyHours.filter((_, i) => i !== index));
+    setCopyFirstHappyHourDays([]);
   };
 
   const updateHappyHour = (
@@ -216,6 +223,18 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     const updated = [...happyHours];
     updated[index] = { ...updated[index], [field]: value };
     setHappyHours(updated);
+
+    if (index === 0 && field === 'day_of_week') {
+      setCopyFirstHappyHourDays((days) => days.filter((day) => day !== value));
+    }
+  };
+
+  const toggleCopyFirstHappyHourDay = (dayIndex: number) => {
+    setCopyFirstHappyHourDays((days) =>
+      days.includes(dayIndex)
+        ? days.filter((day) => day !== dayIndex)
+        : [...days, dayIndex].sort((a, b) => a - b)
+    );
   };
 
   const addDeal = (happyHourIndex: number, field: DealField) => {
@@ -276,9 +295,23 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
 
       if (restaurantError) throw restaurantError;
 
-      if (happyHours.length > 0) {
+      const happyHoursToInsert =
+        happyHours.length === 1
+          ? [
+              happyHours[0],
+              ...copyFirstHappyHourDays.map((day) => ({
+                ...happyHours[0],
+                day_of_week: day,
+                food_deals: happyHours[0].food_deals.map((deal) => ({ ...deal })),
+                drink_deals: happyHours[0].drink_deals.map((deal) => ({ ...deal })),
+                daily_specials: '',
+              })),
+            ]
+          : happyHours;
+
+      if (happyHoursToInsert.length > 0) {
         const { error: happyHoursError } = await supabase.from('happy_hours').insert(
-          happyHours.map((hh) => ({
+          happyHoursToInsert.map((hh) => ({
             day_of_week: hh.day_of_week,
             start_time: hh.start_time,
             end_time: hh.end_time,
@@ -491,6 +524,39 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                     }
                     itemPlaceholder="e.g., Draft beer"
                   />
+
+                  {name && address && happyHours.length === 1 && index === 0 && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="mb-2 text-sm font-medium text-gray-700">Apply to Days</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {DAYS_OF_WEEK.map((day, dayIndex) => {
+                          const isCurrentDay = dayIndex === hh.day_of_week;
+
+                          return (
+                            <label
+                              key={day}
+                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                                isCurrentDay
+                                  ? 'border-gray-200 bg-gray-100 text-gray-400'
+                                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={
+                                  isCurrentDay || copyFirstHappyHourDays.includes(dayIndex)
+                                }
+                                disabled={isCurrentDay}
+                                onChange={() => toggleCopyFirstHappyHourDay(dayIndex)}
+                                className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 disabled:opacity-60"
+                              />
+                              <span>{day}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
