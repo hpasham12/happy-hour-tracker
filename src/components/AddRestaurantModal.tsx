@@ -48,6 +48,23 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     }
   }, [initialCoords]);
 
+  const resetForm = useCallback(() => {
+    setName('');
+    setAddress('');
+    setLatitude('41.8781');
+    setLongitude('-87.6298');
+    setIsInkind(false);
+    setHappyHours([]);
+    setError('');
+    setSearchQuery('');
+    setSearchResults([]);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [resetForm, onClose]);
+
   const searchRestaurants = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -155,14 +172,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
         if (happyHoursError) throw happyHoursError;
       }
 
-      setName('');
-      setAddress('');
-      setLatitude('41.8781');
-      setLongitude('-87.6298');
-      setIsInkind(false);
-      setHappyHours([]);
-      setSearchQuery('');
-      setSearchResults([]);
+      resetForm();
       onSuccess();
       onClose();
     } catch (err) {
@@ -180,7 +190,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">Add New Restaurant</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -443,7 +453,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
