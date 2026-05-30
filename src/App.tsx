@@ -132,7 +132,7 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 flex relative">
+      <div className="flex-1 flex relative z-20">
         {/* Sidebar */}
         <div
           className={`${

@@ -143,6 +143,11 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !address) {
+      setError('Select a restaurant from the search results before saving.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -250,62 +255,17 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
               )}
             </div>
 
-            <div className="text-center text-sm text-gray-500">-- or enter manually --</div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Restaurant Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., The Empty Bottle"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address *
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., 1035 N Western Ave, Chicago, IL"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Latitude *
-                </label>
-                <input
-                  type="text"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            {name && address && (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">{name}</p>
+                    <p className="text-sm text-gray-600">{address}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Longitude *
-                </label>
-                <input
-                  type="text"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2">
               <input
@@ -460,7 +420,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !name || !address}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Adding...' : 'Add Restaurant'}
