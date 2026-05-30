@@ -189,16 +189,19 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
       const cleanedFoodDeals = cleanDeals(foodDeals);
       const cleanedDrinkDeals = cleanDeals(drinkDeals);
       const trimmedDailySpecials = dailySpecials.trim();
+      const happyHourChanges = {
+        start_time: startTime,
+        end_time: endTime,
+        food_deals: cleanedFoodDeals,
+        drink_deals: cleanedDrinkDeals,
+        daily_specials: trimmedDailySpecials,
+      };
 
       const { error: happyHourError } = await supabase
         .from('happy_hours')
         .update({
           day_of_week: dayOfWeek,
-          start_time: startTime,
-          end_time: endTime,
-          food_deals: cleanedFoodDeals,
-          drink_deals: cleanedDrinkDeals,
-          daily_specials: trimmedDailySpecials,
+          ...happyHourChanges,
         })
         .eq('id', happyHour.id)
         .select('id')
@@ -207,17 +210,45 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
       if (happyHourError) throw happyHourError;
 
       if (applyToDays.length > 0) {
-        const { error: copiedHappyHoursError } = await supabase.from('happy_hours').insert(
-          applyToDays.map((day) => ({
-            day_of_week: day,
-            start_time: startTime,
-            end_time: endTime,
-            food_deals: cleanedFoodDeals.map((deal) => ({ ...deal })),
-            drink_deals: cleanedDrinkDeals.map((deal) => ({ ...deal })),
-            daily_specials: trimmedDailySpecials,
-            restaurant_id: happyHour.restaurant_id,
-          }))
-        );
+        const { data: existingHappyHours, error: existingHappyHoursError } = await supabase
+          .from('happy_hours')
+          .select('id, day_of_week')
+          .eq('restaurant_id', happyHour.restaurant_id)
+          .in('day_of_week', applyToDays);
+
+        if (existingHappyHoursError) throw existingHappyHoursError;
+
+        const existingHappyHourIds = existingHappyHours?.map((existing) => existing.id) ?? [];
+
+        if (existingHappyHourIds.length > 0) {
+          const { data: updatedHappyHours, error: updatedHappyHoursError } = await supabase
+            .from('happy_hours')
+            .update(happyHourChanges)
+            .in('id', existingHappyHourIds)
+            .select('id');
+
+          if (updatedHappyHoursError) throw updatedHappyHoursError;
+
+          if (updatedHappyHours.length !== existingHappyHourIds.length) {
+            throw new Error('Some selected days could not be updated. Check database write permissions.');
+          }
+        }
+
+        const existingDays = new Set(existingHappyHours?.map((existing) => existing.day_of_week));
+        const daysToInsert = applyToDays.filter((day) => !existingDays.has(day));
+
+        const { error: copiedHappyHoursError } =
+          daysToInsert.length > 0
+            ? await supabase.from('happy_hours').insert(
+                daysToInsert.map((day) => ({
+                  day_of_week: day,
+                  ...happyHourChanges,
+                  food_deals: cleanedFoodDeals.map((deal) => ({ ...deal })),
+                  drink_deals: cleanedDrinkDeals.map((deal) => ({ ...deal })),
+                  restaurant_id: happyHour.restaurant_id,
+                }))
+              )
+            : { error: null };
 
         if (copiedHappyHoursError) throw copiedHappyHoursError;
       }
