@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 're
 import { Icon } from 'leaflet';
 import type { Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink, Pencil } from 'lucide-react';
+import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink, Pencil, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AddRestaurantModal } from './components/AddRestaurantModal';
 import { EditHappyHourModal } from './components/EditHappyHourModal';
@@ -222,7 +222,9 @@ function App() {
   const [mapClickCoords, setMapClickCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithHappyHours | null>(null);
   const [editingHappyHour, setEditingHappyHour] = useState<HappyHour | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => (typeof window === 'undefined' ? true : window.innerWidth >= 768)
+  );
   const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
 
   useEffect(() => {
@@ -263,48 +265,67 @@ function App() {
   return (
     <div className="h-screen w-screen flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 z-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Happy Hours</h1>
-            <p className="text-sm text-gray-500">Track the best happy hour deals</p>
+      <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3 md:px-6 md:py-4 z-10">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Happy Hours</h1>
+            <p className="text-xs md:text-sm text-gray-500 truncate">Track the best happy hour deals</p>
           </div>
           <button
             onClick={() => {
               setMapClickCoords(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md font-medium"
+            className="flex flex-shrink-0 items-center gap-2 px-4 py-2.5 md:px-6 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md font-medium"
           >
             <Plus className="w-5 h-5" />
-            Add Restaurant
+            <span className="hidden sm:inline">Add Restaurant</span>
           </button>
         </div>
       </header>
 
       <div className="flex-1 flex relative z-20">
-        {/* Sidebar */}
+        {/* Mobile backdrop (only when the bottom sheet is open) */}
+        {sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          />
+        )}
+
+        {/* Restaurant list: bottom sheet on mobile, side panel on desktop */}
         <div
-          className={`${
-            sidebarOpen ? 'w-96' : 'w-0'
-          } transition-all duration-300 bg-white border-r border-gray-200 overflow-hidden z-10 flex flex-col`}
+          className={`bg-white border-gray-200 flex flex-col overflow-hidden
+            fixed inset-x-0 bottom-0 z-30 max-h-[75vh] rounded-t-2xl shadow-2xl
+            transition-transform duration-300 ${sidebarOpen ? 'translate-y-0' : 'translate-y-full'}
+            md:static md:z-10 md:max-h-none md:h-full md:rounded-none md:shadow-none md:border-r
+            md:translate-y-0 md:transition-[width] ${sidebarOpen ? 'md:w-96' : 'md:w-0'}`}
         >
+          {/* Drag handle (mobile only) */}
+          <div className="md:hidden flex justify-center pt-2 pb-1">
+            <div className="h-1.5 w-10 rounded-full bg-gray-300" />
+          </div>
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="font-semibold text-gray-800">
               {restaurants.length} Restaurant{restaurants.length !== 1 ? 's' : ''}
             </h2>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="text-gray-500 hover:text-gray-700 p-1"
+              className="text-gray-500 hover:text-gray-700 p-2 -mr-1 text-lg leading-none md:text-base"
             >
               ×
             </button>
           </div>
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 overscroll-contain">
             {restaurants.map((restaurant) => (
               <button
                 key={restaurant.id}
-                onClick={() => setSelectedRestaurant(restaurant)}
+                onClick={() => {
+                  setSelectedRestaurant(restaurant);
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    setSidebarOpen(false);
+                  }
+                }}
                 className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                   selectedRestaurant?.id === restaurant.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
                 }`}
@@ -343,13 +364,15 @@ function App() {
           </div>
         </div>
 
-        {/* Toggle sidebar button */}
+        {/* Toggle sidebar button: bottom pill on mobile, top-left on desktop */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute left-4 top-4 z-20 bg-white shadow-md rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="absolute z-30 flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium shadow-lg transition-colors hover:bg-gray-50 bottom-6 left-1/2 -translate-x-1/2 md:bottom-auto md:left-4 md:top-4 md:translate-x-0 md:rounded-lg md:px-4 md:py-2 md:shadow-md"
           >
-            Show List
+            <List className="h-4 w-4 md:hidden" />
+            <span className="md:hidden">Restaurants</span>
+            <span className="hidden md:inline">Show List</span>
           </button>
         )}
 

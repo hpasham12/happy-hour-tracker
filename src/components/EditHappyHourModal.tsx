@@ -265,10 +265,10 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
   if (!happyHour) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-200 p-6">
-          <h2 className="text-2xl font-bold text-gray-900">Edit Happy Hour</h2>
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black bg-opacity-50 p-0 md:items-center md:p-4">
+      <div className="h-full max-h-full w-full max-w-2xl overflow-y-auto rounded-none bg-white shadow-2xl md:h-auto md:max-h-[90vh] md:rounded-xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white p-4 md:static md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">Edit Happy Hour</h2>
           <button
             type="button"
             onClick={onClose}
@@ -278,10 +278,10 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6 p-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-5 p-4 md:space-y-6 md:p-6">
           {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-red-700">{error}</div>}
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Day</label>
               <select
@@ -378,7 +378,7 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
             </div>
           </div>
 
-          <div className="flex gap-3 border-t border-gray-200 pt-4">
+          <div className="sticky bottom-0 z-10 -mx-4 flex gap-3 border-t border-gray-200 bg-white px-4 py-4 md:static md:mx-0 md:px-0 md:py-0 md:pt-4">
             <button
               type="button"
               onClick={onClose}
