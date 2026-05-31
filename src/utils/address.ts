@@ -128,7 +128,7 @@ function formatDisplayNameAddress(displayName: string) {
   const stateAndPostcode = [compactState(state), postcode].filter(Boolean).join(' ');
   const city =
     parts.find((part, index) => index > houseNumberIndex + 1 && part === 'Chicago') ??
-    parts.find((part, index) => index > houseNumberIndex + 1 && index < parts.length - 3);
+    parts.find((_, index) => index > houseNumberIndex + 1 && index < parts.length - 3);
 
   return [[houseNumber, street].join(' '), city, stateAndPostcode].filter(Boolean).join(', ');
 }
@@ -138,3 +138,12 @@ export function formatAddress(result: AddressSearchResult) {
   return structuredAddress || formatDisplayNameAddress(result.display_name);
 }
 
+export function normalizeRestaurantIdentity(value: string) {
+  return compactStreetName(value)
+    .toLowerCase()
+    .replace(/\brestaurant\b/g, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}

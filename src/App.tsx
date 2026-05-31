@@ -375,7 +375,7 @@ function App() {
 
           {/* Restaurant detail overlay when selected */}
           {selectedRestaurant && (
-            <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl p-4 md:left-auto md:right-4 md:w-96 z-1000 max-h-[60vh] overflow-y-auto">
+            <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-white rounded-xl shadow-xl p-4 md:left-auto md:right-4 md:w-96 max-h-[60vh] overflow-y-auto">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-gray-900 text-xl">{selectedRestaurant.name}</h3>

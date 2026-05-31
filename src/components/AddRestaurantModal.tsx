@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DAYS_OF_WEEK, type DealItem } from '../types';
-import { formatAddress, type StructuredAddress } from '../utils/address';
+import {
+  formatAddress,
+  normalizeRestaurantIdentity,
+  type StructuredAddress,
+} from '../utils/address';
 
 interface AddRestaurantModalProps {
   isOpen: boolean;
@@ -31,6 +35,17 @@ interface SearchResult {
 
 type DealField = 'food_deals' | 'drink_deals';
 
+interface ExistingRestaurant {
+  id: string;
+  name: string;
+  address: string;
+  is_inkind: boolean;
+  happy_hours?: Array<{
+    id: string;
+    day_of_week: number;
+  }>;
+}
+
 const emptyDeal = (): DealItem => ({ name: '', price: '' });
 
 function cleanDeals(deals: DealItem[]) {
@@ -40,6 +55,44 @@ function cleanDeals(deals: DealItem[]) {
       price: deal.price?.trim() ?? '',
     }))
     .filter((deal) => deal.name);
+}
+
+function getHappyHoursToInsert(
+  happyHours: HappyHourInput[],
+  copyFirstHappyHourDays: number[]
+) {
+  return happyHours.length === 1
+    ? [
+        happyHours[0],
+        ...copyFirstHappyHourDays.map((day) => ({
+          ...happyHours[0],
+          day_of_week: day,
+          food_deals: happyHours[0].food_deals.map((deal) => ({ ...deal })),
+          drink_deals: happyHours[0].drink_deals.map((deal) => ({ ...deal })),
+          daily_specials: '',
+        })),
+      ]
+    : happyHours;
+}
+
+function findDuplicateDays(happyHours: HappyHourInput[]) {
+  const seenDays = new Set<number>();
+  const duplicateDays = new Set<number>();
+
+  happyHours.forEach((happyHour) => {
+    if (seenDays.has(happyHour.day_of_week)) {
+      duplicateDays.add(happyHour.day_of_week);
+      return;
+    }
+
+    seenDays.add(happyHour.day_of_week);
+  });
+
+  return [...duplicateDays].sort((a, b) => a - b);
+}
+
+function formatDayList(days: number[]) {
+  return days.map((day) => DAYS_OF_WEEK[day]).join(', ');
 }
 
 function DealRows({
@@ -283,33 +336,80 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
     setError('');
 
     try {
-      const { data: restaurant, error: restaurantError } = await supabase
+      const happyHoursToInsert = getHappyHoursToInsert(happyHours, copyFirstHappyHourDays);
+      const duplicateSubmittedDays = findDuplicateDays(happyHoursToInsert);
+
+      if (duplicateSubmittedDays.length > 0) {
+        setError(`You already added ${formatDayList(duplicateSubmittedDays)} in this form.`);
+        return;
+      }
+
+      const normalizedName = normalizeRestaurantIdentity(name);
+      const normalizedAddress = normalizeRestaurantIdentity(address);
+      const { data: existingRestaurants, error: existingRestaurantsError } = await supabase
         .from('restaurants')
-        .insert({
-          name,
-          address,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          is_inkind: isInkind,
-        })
-        .select()
-        .single();
+        .select('id, name, address, is_inkind, happy_hours(id, day_of_week)');
 
-      if (restaurantError) throw restaurantError;
+      if (existingRestaurantsError) throw existingRestaurantsError;
 
-      const happyHoursToInsert =
-        happyHours.length === 1
-          ? [
-              happyHours[0],
-              ...copyFirstHappyHourDays.map((day) => ({
-                ...happyHours[0],
-                day_of_week: day,
-                food_deals: happyHours[0].food_deals.map((deal) => ({ ...deal })),
-                drink_deals: happyHours[0].drink_deals.map((deal) => ({ ...deal })),
-                daily_specials: '',
-              })),
-            ]
-          : happyHours;
+      const existingRestaurant = (existingRestaurants as ExistingRestaurant[] | null)?.find(
+        (restaurant) =>
+          normalizeRestaurantIdentity(restaurant.name) === normalizedName &&
+          normalizeRestaurantIdentity(restaurant.address) === normalizedAddress
+      );
+
+      let restaurantId = existingRestaurant?.id;
+
+      if (existingRestaurant) {
+        if (existingRestaurant.is_inkind !== isInkind) {
+          const { error: restaurantUpdateError } = await supabase
+            .from('restaurants')
+            .update({ is_inkind: isInkind })
+            .eq('id', existingRestaurant.id);
+
+          if (restaurantUpdateError) throw restaurantUpdateError;
+        }
+      } else {
+        const { data: restaurant, error: restaurantError } = await supabase
+          .from('restaurants')
+          .insert({
+            name,
+            address,
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+            is_inkind: isInkind,
+          })
+          .select()
+          .single();
+
+        if (restaurantError) throw restaurantError;
+        restaurantId = restaurant.id;
+      }
+
+      if (!restaurantId) {
+        throw new Error('Could not find or create this restaurant.');
+      }
+
+      if (existingRestaurant) {
+        if (happyHoursToInsert.length === 0) {
+          setError('That restaurant is already in the tracker.');
+          return;
+        }
+
+        const existingDays = new Set(
+          existingRestaurant.happy_hours?.map((happyHour) => happyHour.day_of_week) ?? []
+        );
+        const duplicateExistingDays = happyHoursToInsert
+          .map((happyHour) => happyHour.day_of_week)
+          .filter((day) => existingDays.has(day));
+
+        if (duplicateExistingDays.length > 0) {
+          setError(
+            `That restaurant already has an entry for ${formatDayList(duplicateExistingDays)}.`
+          );
+          return;
+        }
+      }
 
       if (happyHoursToInsert.length > 0) {
         const { error: happyHoursError } = await supabase.from('happy_hours').insert(
@@ -320,7 +420,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
             food_deals: cleanDeals(hh.food_deals),
             drink_deals: cleanDeals(hh.drink_deals),
             daily_specials: hh.daily_specials,
-            restaurant_id: restaurant.id,
+            restaurant_id: restaurantId,
           }))
         );
 
