@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
+import type { Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Plus, MapPin, Clock, Utensils, Wine, Star, ExternalLink, Pencil } from 'lucide-react';
 import { supabase } from './lib/supabase';
@@ -28,12 +29,50 @@ const inkindIcon = new Icon({
   shadowSize: [41, 41],
 });
 
+// Larger green marker used to highlight the currently selected restaurant's pin.
+const selectedIcon = new Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  iconSize: [33, 54],
+  iconAnchor: [16, 54],
+  popupAnchor: [1, -46],
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  shadowSize: [54, 54],
+});
+
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click: (e) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+// Pans the map to the selected restaurant and opens its marker popup.
+function SelectedRestaurantController({
+  selectedRestaurant,
+  markerRefs,
+}: {
+  selectedRestaurant: RestaurantWithHappyHours | null;
+  markerRefs: React.MutableRefObject<Record<string, LeafletMarker | null>>;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!selectedRestaurant) return;
+
+    map.flyTo(
+      [selectedRestaurant.latitude, selectedRestaurant.longitude],
+      Math.max(map.getZoom(), 14),
+      { duration: 0.6 }
+    );
+
+    const marker = markerRefs.current[selectedRestaurant.id];
+    if (marker) {
+      marker.openPopup();
+    }
+  }, [selectedRestaurant, map, markerRefs]);
+
   return null;
 }
 
@@ -186,6 +225,7 @@ function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithHappyHours | null>(null);
   const [editingHappyHour, setEditingHappyHour] = useState<HappyHour | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
 
   useEffect(() => {
     fetchRestaurants();
@@ -326,12 +366,23 @@ function App() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapClickHandler onMapClick={handleMapClick} />
+            <SelectedRestaurantController
+              selectedRestaurant={selectedRestaurant}
+              markerRefs={markerRefs}
+            />
 
-            {restaurants.map((restaurant) => (
+            {restaurants.map((restaurant) => {
+              const isSelected = selectedRestaurant?.id === restaurant.id;
+
+              return (
               <Marker
                 key={restaurant.id}
+                ref={(ref) => {
+                  markerRefs.current[restaurant.id] = ref;
+                }}
                 position={[restaurant.latitude, restaurant.longitude]}
-                icon={restaurant.is_inkind ? inkindIcon : customIcon}
+                icon={isSelected ? selectedIcon : restaurant.is_inkind ? inkindIcon : customIcon}
+                zIndexOffset={isSelected ? 1000 : 0}
                 eventHandlers={{
                   click: () => setSelectedRestaurant(restaurant),
                 }}
@@ -370,10 +421,12 @@ function App() {
                   </div>
                 </Popup>
               </Marker>
-            ))}
+              );
+            })}
           </MapContainer>
 
-          {/* Restaurant detail overlay when selected */}
+          {/* Restaurant detail overlay when selected — disabled in favor of map popup */}
+          {/*
           {selectedRestaurant && (
             <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-white rounded-xl shadow-xl p-4 md:left-auto md:right-4 md:w-96 max-h-[60vh] overflow-y-auto">
               <div className="flex items-start justify-between mb-3">
@@ -412,6 +465,7 @@ function App() {
               </a>
             </div>
           )}
+          */}
         </div>
       </div>
 
