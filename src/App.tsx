@@ -222,6 +222,9 @@ function App() {
   const [mapClickCoords, setMapClickCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantWithHappyHours | null>(null);
   const [editingHappyHour, setEditingHappyHour] = useState<HappyHour | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
   const [sidebarOpen, setSidebarOpen] = useState(
     () => (typeof window === 'undefined' ? true : window.innerWidth >= 768)
   );
@@ -229,6 +232,17 @@ function App() {
 
   useEffect(() => {
     fetchRestaurants();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   async function fetchRestaurants() {
@@ -263,7 +277,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col">
+    <div className="flex h-dvh w-screen flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3 md:px-6 md:py-4 z-10">
         <div className="flex items-center justify-between gap-3">
@@ -410,7 +424,13 @@ function App() {
                   click: () => setSelectedRestaurant(restaurant),
                 }}
               >
-                <Popup maxWidth={400} minWidth={250} autoPanPaddingTopLeft={[20, 20]} autoPanPaddingBottomRight={[20, 20]}>
+                <Popup
+                  maxWidth={400}
+                  offset={isMobileViewport ? [0, -12] : [0, 0]}
+                  keepInView
+                  autoPanPaddingTopLeft={[20, 20]}
+                  autoPanPaddingBottomRight={[20, 20]}
+                >
                   <div className="p-1">
                     <div className="flex items-start justify-between">
                       <h3 className="font-bold text-gray-900 text-lg">{restaurant.name}</h3>
@@ -515,6 +535,21 @@ function App() {
         }
         .leaflet-popup-content {
           margin: 12px 16px;
+        }
+        @media (max-width: 640px) {
+          .leaflet-popup {
+            max-width: calc(100vw - 16px);
+          }
+          .leaflet-popup-content-wrapper {
+            max-width: calc(100vw - 32px) !important;
+          }
+          .leaflet-popup-content {
+            width: min(340px, calc(100vw - 56px)) !important;
+            max-width: calc(100vw - 56px) !important;
+            max-height: min(420px, calc(100dvh - 180px));
+            overflow-y: auto;
+            margin: 10px 12px;
+          }
         }
       `}</style>
     </div>
