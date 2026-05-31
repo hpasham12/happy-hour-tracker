@@ -60,17 +60,15 @@ function SelectedRestaurantController({
 
   useEffect(() => {
     if (!selectedRestaurant) return;
-
+    const marker = markerRefs.current[selectedRestaurant.id];
+    const targetZoom = Math.max(map.getZoom(), 14);
+  
+    map.once('moveend', () => marker?.openPopup());
     map.flyTo(
       [selectedRestaurant.latitude, selectedRestaurant.longitude],
-      Math.max(map.getZoom(), 14),
+      targetZoom,
       { duration: 0.6 }
     );
-
-    const marker = markerRefs.current[selectedRestaurant.id];
-    if (marker) {
-      marker.openPopup();
-    }
   }, [selectedRestaurant, map, markerRefs]);
 
   return null;
@@ -135,7 +133,7 @@ function HappyHourCard({ happyHour, onEdit }: { happyHour: HappyHour; onEdit?: (
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
           <Clock className="w-4 h-4 text-blue-600" />
-          {DAYS_OF_WEEK[happyHour.day_of_week]}: {formatTime(happyHour.start_time)} -{' '}
+          {formatTime(happyHour.start_time)} -{' '}
           {formatTime(happyHour.end_time)}
         </div>
         {onEdit && (
@@ -322,6 +320,7 @@ function App() {
                       )}
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{displayAddress(restaurant.address)}</p>
+                    {/*
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                       <MapPin className="w-3 h-3" />
                       <span>
@@ -329,6 +328,7 @@ function App() {
                         {restaurant.happy_hours.length !== 1 ? 's' : ''}
                       </span>
                     </div>
+                    */}
                   </div>
                 </div>
               </button>
@@ -387,7 +387,7 @@ function App() {
                   click: () => setSelectedRestaurant(restaurant),
                 }}
               >
-                <Popup maxWidth={300} minWidth={250}>
+                <Popup maxWidth={400} minWidth={250} autoPanPaddingTopLeft={[20, 20]} autoPanPaddingBottomRight={[20, 20]}>
                   <div className="p-1">
                     <div className="flex items-start justify-between">
                       <h3 className="font-bold text-gray-900 text-lg">{restaurant.name}</h3>
