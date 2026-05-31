@@ -446,10 +446,10 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Restaurant</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch md:items-center justify-center z-50 p-0 md:p-4">
+      <div className="bg-white rounded-none md:rounded-xl shadow-2xl w-full max-w-2xl h-full md:h-auto max-h-full md:max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-white md:static flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">Add New Restaurant</h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -458,7 +458,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 md:p-6 space-y-5 md:space-y-6">
           {error && (
             <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg">{error}</div>
           )}
@@ -564,7 +564,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Day
@@ -691,7 +691,7 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="sticky bottom-0 z-10 -mx-4 px-4 md:mx-0 md:px-0 bg-white md:static flex gap-3 border-t border-gray-200 py-4 md:py-0 md:pt-4">
             <button
               type="button"
               onClick={handleClose}
