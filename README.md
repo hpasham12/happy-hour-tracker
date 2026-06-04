@@ -1,1 +1,1 @@
-# chicago-happy-hours
+# happy-hours
