@@ -1,4 +1,7 @@
 export interface StructuredAddress {
+  amenity?: string;
+  shop?: string;
+  tourism?: string;
   house_number?: string;
   road?: string;
   pedestrian?: string;

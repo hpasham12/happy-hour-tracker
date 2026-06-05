@@ -1,6 +1,7 @@
-import { List, MapPin } from 'lucide-react';
-import type { RestaurantWithHappyHours } from '../../types';
+import { Clock, List, MapPin } from 'lucide-react';
+import type { HappyHour, RestaurantWithHappyHours } from '../../types';
 import { formatAddress } from '../../utils/address';
+import { formatTime } from '../../utils/time';
 
 interface RestaurantSidebarProps {
   restaurants: RestaurantWithHappyHours[];
@@ -15,6 +16,18 @@ function displayAddress(address: string) {
   return formatAddress({ display_name: address });
 }
 
+function getHappyHoursForDay(happyHours: HappyHour[], dayOfWeek: number) {
+  return happyHours
+    .filter((happyHour) => happyHour.day_of_week === dayOfWeek)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+}
+
+function formatHappyHourTimes(happyHours: HappyHour[]) {
+  return happyHours
+    .map((happyHour) => `${formatTime(happyHour.start_time)} - ${formatTime(happyHour.end_time)}`)
+    .join(', ');
+}
+
 export function RestaurantSidebar({
   restaurants,
   selectedRestaurant,
@@ -23,6 +36,8 @@ export function RestaurantSidebar({
   onOpen,
   onSelectRestaurant,
 }: RestaurantSidebarProps) {
+  const today = new Date().getDay();
+
   return (
     <>
       {isOpen && <div onClick={onClose} className="fixed inset-0 z-20 bg-black/40 md:hidden" />}
@@ -50,30 +65,51 @@ export function RestaurantSidebar({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {restaurants.map((restaurant) => (
-            <button
-              key={restaurant.id}
-              type="button"
-              onClick={() => onSelectRestaurant(restaurant)}
-              className={`w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${
-                selectedRestaurant?.id === restaurant.id ? 'border-l-4 border-l-blue-600 bg-blue-50' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900">{restaurant.name}</h3>
-                    {restaurant.is_inkind && (
-                      <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
-                        inKind
+          {restaurants.map((restaurant) => {
+            const todaysHappyHours = getHappyHoursForDay(restaurant.happy_hours, today);
+            const hasHappyHourToday = todaysHappyHours.length > 0;
+
+            return (
+              <button
+                key={restaurant.id}
+                type="button"
+                onClick={() => onSelectRestaurant(restaurant)}
+                className={`w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${
+                  selectedRestaurant?.id === restaurant.id ? 'border-l-4 border-l-blue-600 bg-blue-50' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900">{restaurant.name}</h3>
+                      {restaurant.is_inkind && (
+                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+                          inKind
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">{displayAddress(restaurant.address)}</p>
+                    <div
+                      className={`mt-2 flex items-center gap-1.5 text-sm ${
+                        hasHappyHourToday ? 'font-medium text-blue-700' : 'text-gray-500'
+                      }`}
+                    >
+                      <Clock
+                        className={`h-4 w-4 flex-shrink-0 ${
+                          hasHappyHourToday ? 'text-blue-600' : 'text-gray-400'
+                        }`}
+                      />
+                      <span className="min-w-0 truncate">
+                        {hasHappyHourToday
+                          ? formatHappyHourTimes(todaysHappyHours)
+                          : 'No happy hour today'}
                       </span>
-                    )}
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600">{displayAddress(restaurant.address)}</p>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
           {restaurants.length === 0 && (
             <div className="p-8 text-center text-gray-500">
               <MapPin className="mx-auto mb-3 h-12 w-12 text-gray-300" />

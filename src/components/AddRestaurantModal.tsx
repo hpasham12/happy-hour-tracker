@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Plus, Trash2, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DAYS_OF_WEEK, type DealItem } from '../types';
@@ -33,9 +33,45 @@ interface SearchResult {
   address?: StructuredAddress;
   name?: string;
   type: string;
+  class?: string;
+  importance?: number;
+  namedetails?: {
+    name?: string;
+    ['name:en']?: string;
+    official_name?: string;
+  };
 }
 
 type DealField = 'food_deals' | 'drink_deals';
+
+const CHICAGO_BOUNDS = {
+  north: 42.03,
+  south: 41.64,
+  east: -87.52,
+  west: -87.94,
+};
+
+const VENUE_TYPES = new Set([
+  'bar',
+  'biergarten',
+  'cafe',
+  'fast_food',
+  'food_court',
+  'ice_cream',
+  'pub',
+  'restaurant',
+]);
+
+const SEARCH_STOP_WORDS = new Set([
+  'bar',
+  'cafe',
+  'chicago',
+  'il',
+  'illinois',
+  'pub',
+  'restaurant',
+  'restaurants',
+]);
 
 interface ExistingRestaurant {
   id: string;
@@ -86,6 +122,81 @@ function formatDayList(days: number[]) {
   return days.map((day) => DAYS_OF_WEEK[day]).join(', ');
 }
 
+function getSearchResultName(result: SearchResult) {
+  return (
+    result.namedetails?.name ??
+    result.namedetails?.['name:en'] ??
+    result.namedetails?.official_name ??
+    result.name ??
+    result.address?.amenity ??
+    result.address?.shop ??
+    result.address?.tourism ??
+    result.display_name.split(',')[0]?.trim() ??
+    ''
+  );
+}
+
+function tokenizeSearchValue(value: string) {
+  return normalizeRestaurantIdentity(value)
+    .split(' ')
+    .filter((token) => token && !SEARCH_STOP_WORDS.has(token));
+}
+
+function isInsideChicagoBounds(result: SearchResult) {
+  const lat = Number(result.lat);
+  const lon = Number(result.lon);
+
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    lat >= CHICAGO_BOUNDS.south &&
+    lat <= CHICAGO_BOUNDS.north &&
+    lon >= CHICAGO_BOUNDS.west &&
+    lon <= CHICAGO_BOUNDS.east
+  );
+}
+
+function scoreSearchResult(result: SearchResult, query: string) {
+  const queryTokens = tokenizeSearchValue(query);
+  const name = normalizeRestaurantIdentity(getSearchResultName(result));
+  const searchableText = normalizeRestaurantIdentity(
+    [getSearchResultName(result), result.display_name, formatAddress(result)].join(' ')
+  );
+  const matchingTokens = queryTokens.filter((token) => searchableText.includes(token)).length;
+  const allTokensMatch = queryTokens.length === 0 || matchingTokens === queryTokens.length;
+  const isVenueType = result.class === 'amenity' && VENUE_TYPES.has(result.type);
+
+  let score = 0;
+
+  if (allTokensMatch) score += 40;
+  score += matchingTokens * 12;
+  if (queryTokens.length > 0 && queryTokens.every((token) => name.includes(token))) score += 30;
+  if (queryTokens.length > 0 && name.startsWith(queryTokens.join(' '))) score += 20;
+  if (isVenueType) score += 25;
+  if (isInsideChicagoBounds(result)) score += 20;
+  score += Math.min((result.importance ?? 0) * 10, 10);
+
+  return score;
+}
+
+function rankSearchResults(results: SearchResult[], query: string) {
+  const uniqueResults = new Map<string, SearchResult>();
+
+  results
+    .filter(isInsideChicagoBounds)
+    .forEach((result) => {
+      const key = normalizeRestaurantIdentity(`${getSearchResultName(result)} ${formatAddress(result)}`);
+      if (key) uniqueResults.set(key, result);
+    });
+
+  return [...uniqueResults.values()]
+    .map((result) => ({ result, score: scoreSearchResult(result, query) }))
+    .filter(({ score }) => score >= 20)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map(({ result }) => result);
+}
+
 export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }: AddRestaurantModalProps) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -100,6 +211,8 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [copyFirstHappyHourDays, setCopyFirstHappyHourDays] = useState<number[]>([]);
+  const latestSearchId = useRef(0);
+  const searchAbortController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (initialCoords) {
@@ -127,46 +240,71 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
   }, [resetForm, onClose]);
 
   const searchRestaurants = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    const trimmedQuery = query.trim();
+    const searchId = latestSearchId.current + 1;
+    latestSearchId.current = searchId;
+    searchAbortController.current?.abort();
+
+    if (!trimmedQuery) {
       setSearchResults([]);
+      setShowResults(false);
+      setSearching(false);
       return;
     }
 
+    const controller = new AbortController();
+    searchAbortController.current = controller;
     setSearching(true);
+
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          query + ' restaurant chicago'
-        )}&limit=5&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'ChiHappyHours/1.0',
-          },
-        }
-      );
-      const data = await response.json();
-      setSearchResults(data);
+      const searchParams = new URLSearchParams({
+        format: 'json',
+        q: `${trimmedQuery}, Chicago, IL`,
+        limit: '10',
+        addressdetails: '1',
+        namedetails: '1',
+        extratags: '1',
+        dedupe: '1',
+        countrycodes: 'us',
+        bounded: '1',
+        viewbox: `${CHICAGO_BOUNDS.west},${CHICAGO_BOUNDS.north},${CHICAGO_BOUNDS.east},${CHICAGO_BOUNDS.south}`,
+      });
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${searchParams}`, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'ChiHappyHours/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Search failed with status ${response.status}`);
+      }
+
+      const data = (await response.json()) as SearchResult[];
+      if (latestSearchId.current !== searchId) return;
+
+      setSearchResults(rankSearchResults(data, trimmedQuery));
       setShowResults(true);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Search error:', err);
     } finally {
-      setSearching(false);
+      if (latestSearchId.current === searchId) {
+        setSearching(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchQuery) {
-        searchRestaurants(searchQuery);
-      }
+      searchRestaurants(searchQuery);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery, searchRestaurants]);
 
   const selectSearchResult = (result: SearchResult) => {
-    const parts = result.display_name.split(', ');
-    const restaurantName = parts[0];
+    const restaurantName = getSearchResultName(result);
     const formattedAddress = formatAddress(result);
 
     setName(restaurantName);

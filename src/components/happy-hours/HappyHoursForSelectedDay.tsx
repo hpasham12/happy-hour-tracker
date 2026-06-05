@@ -13,21 +13,22 @@ export function HappyHoursForSelectedDay({
   onEdit,
   compact = false,
 }: HappyHoursForSelectedDayProps) {
+  const today = new Date().getDay();
   const availableDays = Array.from(new Set(happyHours.map((happyHour) => happyHour.day_of_week))).sort(
     (a, b) => a - b
   );
-  const defaultDay = availableDays.includes(1) ? 1 : availableDays[0];
+  const defaultDay = availableDays.includes(today) ? today : availableDays[0];
   const [selectedDay, setSelectedDay] = useState(defaultDay);
 
   useEffect(() => {
     setSelectedDay(defaultDay);
   }, [defaultDay]);
 
-  const filteredHappyHours = happyHours.filter((happyHour) => happyHour.day_of_week === selectedDay);
-
   if (happyHours.length === 0) {
     return <p className="text-sm text-gray-500">No happy hour info added yet.</p>;
   }
+
+  const filteredHappyHours = happyHours.filter((happyHour) => happyHour.day_of_week === selectedDay);
 
   return (
     <div>
