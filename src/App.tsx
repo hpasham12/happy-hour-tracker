@@ -298,7 +298,7 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 flex relative z-20">
+      <div className="flex-1 flex min-h-0 relative z-20">
         {/* Mobile backdrop (only when the bottom sheet is open) */}
         {sidebarOpen && (
           <div
@@ -312,7 +312,7 @@ function App() {
           className={`bg-white border-gray-200 flex flex-col overflow-hidden
             fixed inset-x-0 bottom-0 z-30 max-h-[75vh] rounded-t-2xl shadow-2xl
             transition-transform duration-300 ${sidebarOpen ? 'translate-y-0' : 'translate-y-full'}
-            md:static md:z-10 md:max-h-none md:h-full md:rounded-none md:shadow-none md:border-r
+            md:static md:z-10 md:max-h-none md:h-full md:min-h-0 md:rounded-none md:shadow-none md:border-r
             md:translate-y-0 md:transition-[width] ${sidebarOpen ? 'md:w-96' : 'md:w-0'}`}
         >
           {/* Drag handle (mobile only) */}
@@ -330,7 +330,7 @@ function App() {
               ×
             </button>
           </div>
-          <div className="overflow-y-auto flex-1 overscroll-contain">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {restaurants.map((restaurant) => (
               <button
                 key={restaurant.id}
