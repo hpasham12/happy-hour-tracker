@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { DAYS_OF_WEEK, type DealItem, type DealListValue, type HappyHour } from '../types';
+import { DAYS_OF_WEEK, type DealItem, type HappyHour } from '../types';
+import { DealRows } from './DealRows';
+import { cleanDeals, emptyDeal, normalizeDealsForForm } from '../utils/deals';
 
 interface EditHappyHourModalProps {
   happyHour: HappyHour | null;
@@ -10,93 +12,6 @@ interface EditHappyHourModalProps {
 }
 
 type DealField = 'food_deals' | 'drink_deals';
-
-const emptyDeal = (): DealItem => ({ name: '', price: '' });
-
-function cleanDeals(deals: DealItem[]) {
-  return deals
-    .map((deal) => ({
-      name: deal.name.trim(),
-      price: deal.price?.trim() ?? '',
-    }))
-    .filter((deal) => deal.name);
-}
-
-function normalizeDealsForForm(deals: DealListValue): DealItem[] {
-  if (!deals) return [emptyDeal()];
-
-  if (typeof deals === 'string') {
-    const trimmed = deals.trim();
-    return trimmed ? [{ name: trimmed, price: '' }] : [emptyDeal()];
-  }
-
-  const normalizedDeals = deals.map((deal) => ({
-    name: deal.name,
-    price: deal.price ?? '',
-  }));
-
-  return normalizedDeals.length > 0 ? normalizedDeals : [emptyDeal()];
-}
-
-function DealRows({
-  title,
-  deals,
-  onAdd,
-  onRemove,
-  onChange,
-  itemPlaceholder,
-}: {
-  title: string;
-  deals: DealItem[];
-  onAdd: () => void;
-  onRemove: (dealIndex: number) => void;
-  onChange: (dealIndex: number, field: keyof DealItem, value: string) => void;
-  itemPlaceholder: string;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="block text-sm font-medium text-gray-700">{title}</label>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          <Plus className="h-4 w-4" />
-          Add Item
-        </button>
-      </div>
-
-      <div className="space-y-2">
-        {deals.map((deal, dealIndex) => (
-          <div key={dealIndex} className="grid grid-cols-[minmax(0,1fr)_7rem_2rem] gap-2">
-            <input
-              type="text"
-              value={deal.name}
-              onChange={(e) => onChange(dealIndex, 'name', e.target.value)}
-              placeholder={itemPlaceholder}
-              className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              value={deal.price ?? ''}
-              onChange={(e) => onChange(dealIndex, 'price', e.target.value)}
-              placeholder="$"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="button"
-              onClick={() => onRemove(dealIndex)}
-              className="flex h-10 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-gray-200"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyHourModalProps) {
   const [dayOfWeek, setDayOfWeek] = useState(0);
