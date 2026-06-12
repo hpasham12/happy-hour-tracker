@@ -9,6 +9,7 @@ import { RestaurantMap } from './components/map/RestaurantMap';
 import { RestaurantSidebar } from './components/restaurants/RestaurantSidebar';
 import { useMobileViewport } from './hooks/useMobileViewport';
 import { useResponsiveSidebar } from './hooks/useResponsiveSidebar';
+import { useUserLocation } from './hooks/useUserLocation';
 import { fetchRestaurantsWithHappyHours } from './services/restaurants';
 import type { HappyHour, RestaurantWithHappyHours } from './types';
 
@@ -20,6 +21,7 @@ function App() {
   const [editingHappyHour, setEditingHappyHour] = useState<HappyHour | null>(null);
   const [sidebarOpen, setSidebarOpen] = useResponsiveSidebar();
   const isMobileViewport = useMobileViewport();
+  const userLocation = useUserLocation();
   const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
 
   const fetchRestaurants = useCallback(async () => {
@@ -71,6 +73,8 @@ function App() {
           onClose={() => setSidebarOpen(false)}
           onOpen={() => setSidebarOpen(true)}
           onSelectRestaurant={handleRestaurantSelect}
+          userCoords={userLocation.coords}
+          locationStatus={userLocation.status}
         />
 
         <RestaurantMap
