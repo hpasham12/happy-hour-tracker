@@ -1,7 +1,10 @@
-import { Clock, List, MapPin } from 'lucide-react';
+import { useMemo } from 'react';
+import { Clock, List, MapPin, Navigation } from 'lucide-react';
 import type { HappyHour, RestaurantWithHappyHours } from '../../types';
 import { formatAddress } from '../../utils/address';
-import { formatTime } from '../../utils/time';
+import { formatTime, isWithinWindow, timeToMinutes } from '../../utils/time';
+import { formatDistanceMiles, haversineMiles, type Coordinates } from '../../utils/distance';
+import type { LocationStatus } from '../../hooks/useUserLocation';
 
 interface RestaurantSidebarProps {
   restaurants: RestaurantWithHappyHours[];
@@ -10,6 +13,8 @@ interface RestaurantSidebarProps {
   onClose: () => void;
   onOpen: () => void;
   onSelectRestaurant: (restaurant: RestaurantWithHappyHours) => void;
+  userCoords: Coordinates | null;
+  locationStatus: LocationStatus;
 }
 
 function displayAddress(address: string) {
@@ -28,6 +33,12 @@ function formatHappyHourTimes(happyHours: HappyHour[]) {
     .join(', ');
 }
 
+// Earliest happy-hour start (minutes since midnight) for the given day, or Infinity if none.
+function earliestStartMinutes(happyHours: HappyHour[]) {
+  if (happyHours.length === 0) return Number.POSITIVE_INFINITY;
+  return Math.min(...happyHours.map((hh) => timeToMinutes(hh.start_time)));
+}
+
 export function RestaurantSidebar({
   restaurants,
   selectedRestaurant,
@@ -35,8 +46,34 @@ export function RestaurantSidebar({
   onClose,
   onOpen,
   onSelectRestaurant,
+  userCoords,
+  locationStatus,
 }: RestaurantSidebarProps) {
   const today = new Date().getDay();
+  const nowMinutes = useMemo(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }, []);
+
+  // When the user's location is known, sort nearest-first. Otherwise fall back to
+  // sorting by today's happy-hour start time (restaurants active/earliest first).
+  const sortedRestaurants = useMemo(() => {
+    const list = [...restaurants];
+
+    if (userCoords) {
+      return list.sort((a, b) => {
+        const da = haversineMiles(userCoords, { latitude: a.latitude, longitude: a.longitude });
+        const db = haversineMiles(userCoords, { latitude: b.latitude, longitude: b.longitude });
+        return da - db;
+      });
+    }
+
+    return list.sort(
+      (a, b) =>
+        earliestStartMinutes(getHappyHoursForDay(a.happy_hours, today)) -
+        earliestStartMinutes(getHappyHoursForDay(b.happy_hours, today))
+    );
+  }, [restaurants, userCoords, today]);
 
   return (
     <>
@@ -64,10 +101,24 @@ export function RestaurantSidebar({
             x
           </button>
         </div>
+        {locationStatus === 'denied' || locationStatus === 'unavailable' ? (
+          <p className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-xs text-gray-500">
+            Enable location to sort by distance. Sorted by today's happy hour time.
+          </p>
+        ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {restaurants.map((restaurant) => {
+          {sortedRestaurants.map((restaurant) => {
             const todaysHappyHours = getHappyHoursForDay(restaurant.happy_hours, today);
             const hasHappyHourToday = todaysHappyHours.length > 0;
+            const happeningNow = todaysHappyHours.some((hh) =>
+              isWithinWindow(hh.start_time, hh.end_time, nowMinutes)
+            );
+            const distanceMiles = userCoords
+              ? haversineMiles(userCoords, {
+                  latitude: restaurant.latitude,
+                  longitude: restaurant.longitude,
+                })
+              : null;
 
             return (
               <button
@@ -80,15 +131,27 @@ export function RestaurantSidebar({
               >
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold text-gray-900">{restaurant.name}</h3>
                       {restaurant.is_inkind && (
                         <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
                           inKind
                         </span>
                       )}
+                      {happeningNow && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+                          Happening now
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-gray-600">{displayAddress(restaurant.address)}</p>
+                    {distanceMiles !== null && (
+                      <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                        <Navigation className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                        <span>{formatDistanceMiles(distanceMiles)}</span>
+                      </div>
+                    )}
                     <div
                       className={`mt-2 flex items-center gap-1.5 text-sm ${
                         hasHappyHourToday ? 'font-medium text-blue-700' : 'text-gray-500'
