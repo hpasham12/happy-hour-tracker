@@ -5,9 +5,13 @@ import { formatAddress } from '../../utils/address';
 import { formatTime, isWithinWindow, timeToMinutes } from '../../utils/time';
 import { formatDistanceMiles, haversineMiles, type Coordinates } from '../../utils/distance';
 import type { LocationStatus } from '../../hooks/useUserLocation';
+import type { RestaurantFilters } from '../../utils/filters';
+import { hasActiveFilters } from '../../utils/filters';
+import { FilterPanel } from '../filters/FilterPanel';
 
 interface RestaurantSidebarProps {
   restaurants: RestaurantWithHappyHours[];
+  totalCount: number;
   selectedRestaurant: RestaurantWithHappyHours | null;
   isOpen: boolean;
   onClose: () => void;
@@ -15,6 +19,10 @@ interface RestaurantSidebarProps {
   onSelectRestaurant: (restaurant: RestaurantWithHappyHours) => void;
   userCoords: Coordinates | null;
   locationStatus: LocationStatus;
+  filters: RestaurantFilters;
+  onUpdateFilters: (patch: Partial<RestaurantFilters>) => void;
+  onToggleDay: (day: number) => void;
+  onClearFilters: () => void;
 }
 
 function displayAddress(address: string) {
@@ -41,6 +49,7 @@ function earliestStartMinutes(happyHours: HappyHour[]) {
 
 export function RestaurantSidebar({
   restaurants,
+  totalCount,
   selectedRestaurant,
   isOpen,
   onClose,
@@ -48,8 +57,13 @@ export function RestaurantSidebar({
   onSelectRestaurant,
   userCoords,
   locationStatus,
+  filters,
+  onUpdateFilters,
+  onToggleDay,
+  onClearFilters,
 }: RestaurantSidebarProps) {
   const today = new Date().getDay();
+  const filtersActive = hasActiveFilters(filters);
   const nowMinutes = useMemo(() => {
     const now = new Date();
     return now.getHours() * 60 + now.getMinutes();
@@ -91,7 +105,9 @@ export function RestaurantSidebar({
         </div>
         <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <h2 className="font-semibold text-gray-800">
-            {restaurants.length} Restaurant{restaurants.length !== 1 ? 's' : ''}
+            {filtersActive
+              ? `${restaurants.length} of ${totalCount} Restaurant${totalCount !== 1 ? 's' : ''}`
+              : `${restaurants.length} Restaurant${restaurants.length !== 1 ? 's' : ''}`}
           </h2>
           <button
             type="button"
@@ -107,6 +123,15 @@ export function RestaurantSidebar({
           </p>
         ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="border-b border-gray-100 p-3 md:hidden">
+            <FilterPanel
+              filters={filters}
+              onUpdate={onUpdateFilters}
+              onToggleDay={onToggleDay}
+              onClear={onClearFilters}
+              className="border-0 shadow-none"
+            />
+          </div>
           {sortedRestaurants.map((restaurant) => {
             const todaysHappyHours = getHappyHoursForDay(restaurant.happy_hours, today);
             const hasHappyHourToday = todaysHappyHours.length > 0;
@@ -173,13 +198,26 @@ export function RestaurantSidebar({
               </button>
             );
           })}
-          {restaurants.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-              <MapPin className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-              <p>No restaurants yet.</p>
-              <p className="mt-1 text-sm">Click on the map or the Add button to add one!</p>
-            </div>
-          )}
+          {restaurants.length === 0 &&
+            (filtersActive ? (
+              <div className="p-8 text-center text-gray-500">
+                <MapPin className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+                <p>No restaurants match your filters.</p>
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-gray-500">
+                <MapPin className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+                <p>No restaurants yet.</p>
+                <p className="mt-1 text-sm">Click on the map or the Add button to add one!</p>
+              </div>
+            ))}
         </div>
       </div>
 
@@ -187,7 +225,7 @@ export function RestaurantSidebar({
         <button
           type="button"
           onClick={onOpen}
-          className="absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium shadow-lg transition-colors hover:bg-gray-50 md:bottom-auto md:left-4 md:top-4 md:translate-x-0 md:rounded-lg md:px-4 md:py-2 md:shadow-md"
+          className="absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium shadow-lg transition-colors hover:bg-gray-50 md:bottom-auto md:left-4 md:top-20 md:translate-x-0 md:rounded-lg md:px-4 md:py-2 md:shadow-md"
         >
           <List className="h-4 w-4 md:hidden" />
           <span className="md:hidden">Restaurants</span>

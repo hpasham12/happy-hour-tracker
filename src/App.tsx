@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AddRestaurantModal } from './components/AddRestaurantModal';
@@ -9,8 +9,10 @@ import { RestaurantMap } from './components/map/RestaurantMap';
 import { RestaurantSidebar } from './components/restaurants/RestaurantSidebar';
 import { useMobileViewport } from './hooks/useMobileViewport';
 import { useResponsiveSidebar } from './hooks/useResponsiveSidebar';
+import { useRestaurantFilters } from './hooks/useRestaurantFilters';
 import { useUserLocation } from './hooks/useUserLocation';
 import { fetchRestaurantsWithHappyHours } from './services/restaurants';
+import { filterRestaurants } from './utils/filters';
 import type { HappyHour, RestaurantWithHappyHours } from './types';
 
 function App() {
@@ -22,7 +24,18 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useResponsiveSidebar();
   const isMobileViewport = useMobileViewport();
   const userLocation = useUserLocation();
+  const { filters, updateFilters, toggleDay, clearFilters } = useRestaurantFilters();
   const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
+
+  const nowMinutes = useMemo(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }, []);
+
+  const filteredRestaurants = useMemo(
+    () => filterRestaurants(restaurants, filters, nowMinutes),
+    [restaurants, filters, nowMinutes]
+  );
 
   const fetchRestaurants = useCallback(async () => {
     const nextRestaurants = await fetchRestaurantsWithHappyHours();
@@ -67,7 +80,8 @@ function App() {
 
       <div className="relative z-20 flex min-h-0 flex-1">
         <RestaurantSidebar
-          restaurants={restaurants}
+          restaurants={filteredRestaurants}
+          totalCount={restaurants.length}
           selectedRestaurant={selectedRestaurant}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -75,16 +89,24 @@ function App() {
           onSelectRestaurant={handleRestaurantSelect}
           userCoords={userLocation.coords}
           locationStatus={userLocation.status}
+          filters={filters}
+          onUpdateFilters={updateFilters}
+          onToggleDay={toggleDay}
+          onClearFilters={clearFilters}
         />
 
         <RestaurantMap
-          restaurants={restaurants}
+          restaurants={filteredRestaurants}
           selectedRestaurant={selectedRestaurant}
           markerRefs={markerRefs}
           isMobileViewport={isMobileViewport}
           onMapClick={handleMapClick}
           onSelectRestaurant={setSelectedRestaurant}
           onEditHappyHour={setEditingHappyHour}
+          filters={filters}
+          onUpdateFilters={updateFilters}
+          onToggleDay={toggleDay}
+          onClearFilters={clearFilters}
         />
       </div>
 
