@@ -1,6 +1,8 @@
 import type { Marker as LeafletMarker } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import type { HappyHour, RestaurantWithHappyHours } from '../../types';
+import type { RestaurantFilters } from '../../utils/filters';
+import { FilterPanel } from '../filters/FilterPanel';
 import {
   defaultRestaurantIcon,
   inkindRestaurantIcon,
@@ -18,6 +20,10 @@ interface RestaurantMapProps {
   onMapClick: (lat: number, lng: number) => void;
   onSelectRestaurant: (restaurant: RestaurantWithHappyHours) => void;
   onEditHappyHour: (happyHour: HappyHour) => void;
+  filters: RestaurantFilters;
+  onUpdateFilters: (patch: Partial<RestaurantFilters>) => void;
+  onToggleDay: (day: number) => void;
+  onClearFilters: () => void;
 }
 
 export function RestaurantMap({
@@ -28,9 +34,20 @@ export function RestaurantMap({
   onMapClick,
   onSelectRestaurant,
   onEditHappyHour,
+  filters,
+  onUpdateFilters,
+  onToggleDay,
+  onClearFilters,
 }: RestaurantMapProps) {
   return (
     <div className="relative z-0 flex-1">
+      <FilterPanel
+        filters={filters}
+        onUpdate={onUpdateFilters}
+        onToggleDay={onToggleDay}
+        onClear={onClearFilters}
+        className="absolute left-3 top-3 z-[1000] hidden w-64 md:block"
+      />
       <MapContainer
         center={[41.8781, -87.6298]}
         zoom={11}
