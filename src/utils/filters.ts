@@ -25,8 +25,9 @@ export const emptyFilters: RestaurantFilters = {
   inkindOnly: false,
 };
 
-// Each entry is an independently-active filter dimension. Restaurants match when
-// they satisfy ANY active dimension (OR semantics, per product spec).
+// Each entry is an independently-active filter dimension. Restaurants must satisfy
+// EVERY active dimension (AND across dimensions); OR applies only WITHIN a dimension
+// (e.g. selecting Mon + Tue matches restaurants open on either day).
 function activePredicates(
   filters: RestaurantFilters,
   nowMinutes: number
@@ -118,8 +119,9 @@ export function activeFilterCount(filters: RestaurantFilters): number {
   return count;
 }
 
-// Returns restaurants matching ANY active filter (OR). With no active filters,
-// every restaurant is returned unchanged.
+// Returns restaurants matching ALL active filter dimensions (AND across
+// dimensions, OR within each). With no active filters, every restaurant is
+// returned unchanged.
 export function filterRestaurants(
   restaurants: RestaurantWithHappyHours[],
   filters: RestaurantFilters,
@@ -129,6 +131,6 @@ export function filterRestaurants(
   if (predicates.length === 0) return restaurants;
 
   return restaurants.filter((restaurant) =>
-    predicates.some((predicate) => predicate(restaurant))
+    predicates.every((predicate) => predicate(restaurant))
   );
 }

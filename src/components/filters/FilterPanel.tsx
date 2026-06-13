@@ -181,7 +181,7 @@ export function FilterPanel({
 
           {count > 1 && (
             <p className="rounded-md bg-gray-50 px-2 py-1.5 text-xs text-gray-500">
-              Showing restaurants matching any selected filter.
+              Showing restaurants matching all selected filters.
             </p>
           )}
         </div>
