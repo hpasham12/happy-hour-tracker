@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { activeFilterCount, type RestaurantFilters } from '../../utils/filters';
+import { TimeSelect } from '../common/TimeSelect';
 
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -93,13 +94,14 @@ export function FilterPanel({
               Happening now
             </label>
             <div className="mt-2 flex items-center gap-2">
-              <input
-                type="time"
+              <TimeSelect
+                ariaLabel="Filter start time"
+                emptyLabel="Any"
                 value={filters.timeRange?.start ?? ''}
-                onChange={(event) =>
+                onChange={(value) =>
                   onUpdate({
-                    timeRange: event.target.value
-                      ? { start: event.target.value, end: filters.timeRange?.end ?? '23:59' }
+                    timeRange: value
+                      ? { start: value, end: filters.timeRange?.end ?? '23:45' }
                       : filters.timeRange?.end
                         ? { start: '00:00', end: filters.timeRange.end }
                         : null,
@@ -108,15 +110,16 @@ export function FilterPanel({
                 className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
               />
               <span className="text-xs text-gray-400">to</span>
-              <input
-                type="time"
+              <TimeSelect
+                ariaLabel="Filter end time"
+                emptyLabel="Any"
                 value={filters.timeRange?.end ?? ''}
-                onChange={(event) =>
+                onChange={(value) =>
                   onUpdate({
-                    timeRange: event.target.value
-                      ? { start: filters.timeRange?.start ?? '00:00', end: event.target.value }
+                    timeRange: value
+                      ? { start: filters.timeRange?.start ?? '00:00', end: value }
                       : filters.timeRange?.start
-                        ? { start: filters.timeRange.start, end: '23:59' }
+                        ? { start: filters.timeRange.start, end: '23:45' }
                         : null,
                   })
                 }

@@ -9,6 +9,7 @@ import {
 } from '../utils/address';
 import { cleanDeals, emptyDeal } from '../utils/deals';
 import { DealRows } from './DealRows';
+import { TimeSelect } from './common/TimeSelect';
 
 interface AddRestaurantModalProps {
   isOpen: boolean;
@@ -656,12 +657,10 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Start Time
                       </label>
-                      <input
-                        type="time"
+                      <TimeSelect
+                        ariaLabel="Start time"
                         value={hh.start_time}
-                        onChange={(e) =>
-                          updateHappyHour(index, 'start_time', e.target.value)
-                        }
+                        onChange={(value) => updateHappyHour(index, 'start_time', value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -669,12 +668,10 @@ export function AddRestaurantModal({ isOpen, onClose, onSuccess, initialCoords }
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         End Time
                       </label>
-                      <input
-                        type="time"
+                      <TimeSelect
+                        ariaLabel="End time"
                         value={hh.end_time}
-                        onChange={(e) =>
-                          updateHappyHour(index, 'end_time', e.target.value)
-                        }
+                        onChange={(value) => updateHappyHour(index, 'end_time', value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
