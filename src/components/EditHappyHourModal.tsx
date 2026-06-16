@@ -3,7 +3,9 @@ import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DAYS_OF_WEEK, type DealItem, type HappyHour } from '../types';
 import { DealRows } from './DealRows';
+import { TimeSelect } from './common/TimeSelect';
 import { cleanDeals, emptyDeal, normalizeDealsForForm } from '../utils/deals';
+import { roundToNearest15 } from '../utils/time';
 
 interface EditHappyHourModalProps {
   happyHour: HappyHour | null;
@@ -28,8 +30,8 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
     if (!happyHour) return;
 
     setDayOfWeek(happyHour.day_of_week);
-    setStartTime(happyHour.start_time.slice(0, 5));
-    setEndTime(happyHour.end_time.slice(0, 5));
+    setStartTime(roundToNearest15(happyHour.start_time.slice(0, 5)));
+    setEndTime(roundToNearest15(happyHour.end_time.slice(0, 5)));
     setFoodDeals(normalizeDealsForForm(happyHour.food_deals));
     setDrinkDeals(normalizeDealsForForm(happyHour.drink_deals));
     setDailySpecials(happyHour.daily_specials ?? '');
@@ -213,19 +215,19 @@ export function EditHappyHourModal({ happyHour, onClose, onSuccess }: EditHappyH
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Start Time</label>
-              <input
-                type="time"
+              <TimeSelect
+                ariaLabel="Start time"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={setStartTime}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">End Time</label>
-              <input
-                type="time"
+              <TimeSelect
+                ariaLabel="End time"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={setEndTime}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               />
             </div>
