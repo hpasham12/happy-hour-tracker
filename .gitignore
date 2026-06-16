@@ -21,3 +21,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Local bulk-seed data (not the example)
+scripts/seed-data.json

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "The Sample Tavern",
+    "address": "123 Main St, Sunnyvale, CA 94086",
+    "is_inkind": false,
+    "happy_hours": [
+      {
+        "day_of_week": 1,
+        "start_time": "16:00",
+        "end_time": "18:00",
+        "food_deals": [
+          { "name": "Half-price wings", "price": "$6" },
+          { "name": "Truffle fries", "price": "$5" }
+        ],
+        "drink_deals": [
+          { "name": "Draft beer", "price": "$4" },
+          { "name": "House wine", "price": "$7" }
+        ],
+        "daily_specials": "Trivia night"
+      },
+      {
+        "day_of_week": 5,
+        "start_time": "15:30",
+        "end_time": "18:30",
+        "food_deals": [{ "name": "Sliders", "price": "$8" }],
+        "drink_deals": [{ "name": "Well cocktails", "price": "$8" }],
+        "daily_specials": ""
+      }
+    ]
+  },
+  {
+    "name": "Coords Provided Cafe",
+    "address": "456 Market St, San Jose, CA 95113",
+    "latitude": 37.3349,
+    "longitude": -121.8901,
+    "happy_hours": [
+      {
+        "day_of_week": 3,
+        "start_time": "17:00",
+        "end_time": "19:00",
+        "food_deals": [{ "name": "Tacos", "price": "$2 each" }],
+        "drink_deals": [{ "name": "Margaritas", "price": "$6" }],
+        "daily_specials": "Taco Wednesday"
+      }
+    ]
+  }
+]
