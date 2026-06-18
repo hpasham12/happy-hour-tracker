@@ -158,15 +158,15 @@ export function RestaurantSidebar({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold text-gray-900">{restaurant.name}</h3>
-                      {restaurant.is_inkind && (
+                      {/* {restaurant.is_inkind && (
                         <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
                           inKind
                         </span>
-                      )}
+                      )} */}
                       {happeningNow && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-                          Happening now
+                          Now
                         </span>
                       )}
                     </div>

@@ -30,7 +30,7 @@ export function FilterPanel({
   };
 
   return (
-    <div className={`rounded-xl border border-gray-200 bg-white shadow-md ${className}`}>
+    <div className={`rounded-xl border border-gray-200 bg-white shadow-md md:w-auto ${className}`}>
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <button
           type="button"
@@ -141,7 +141,7 @@ export function FilterPanel({
                     type="number"
                     min="0"
                     step="1"
-                    placeholder="any"
+                    placeholder=""
                     value={filters.maxFoodPrice ?? ''}
                     onChange={(event) =>
                       onUpdate({ maxFoodPrice: parsePriceInput(event.target.value) })
@@ -158,7 +158,7 @@ export function FilterPanel({
                     type="number"
                     min="0"
                     step="1"
-                    placeholder="any"
+                    placeholder=""
                     value={filters.maxDrinkPrice ?? ''}
                     onChange={(event) =>
                       onUpdate({ maxDrinkPrice: parsePriceInput(event.target.value) })
