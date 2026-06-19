@@ -41,18 +41,42 @@ function loadEnv() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function geocode(address) {
-  const params = new URLSearchParams({ q: address, format: 'json', limit: '1' });
+// Nominatim struggles with unit/suite tokens (e.g. "#1", "Ste 200"). Strip them
+// so the street address still geocodes; the full address is still stored as-is.
+function simplifyAddress(address) {
+  return address
+    .replace(/#\s*\w+/gi, '')
+    .replace(/\b(suite|ste|unit|apt|apartment|fl|floor|rm|room)\s*\.?\s*\w+/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s*,\s*,/g, ',')
+    .replace(/,\s*,/g, ',')
+    .trim();
+}
+
+async function geocodeQuery(query) {
+  const params = new URLSearchParams({ q: query, format: 'json', limit: '1' });
   const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
     headers: { 'User-Agent': 'happy-hour-tracker-seed/1.0' },
   });
-  if (!response.ok) throw new Error(`Geocode failed (${response.status}) for "${address}"`);
+  if (!response.ok) throw new Error(`Geocode failed (${response.status}) for "${query}"`);
   const results = await response.json();
-  if (!results.length) throw new Error(`No geocode match for "${address}"`);
+  return results.length ? results[0] : null;
+}
+
+async function geocode(address) {
+  let hit = await geocodeQuery(address);
+
+  const simplified = simplifyAddress(address);
+  if (!hit && simplified && simplified !== address) {
+    await sleep(1100);
+    hit = await geocodeQuery(simplified);
+  }
+
+  if (!hit) throw new Error(`No geocode match for "${address}"`);
   return {
-    latitude: parseFloat(results[0].lat),
-    longitude: parseFloat(results[0].lon),
-    display: results[0].display_name,
+    latitude: parseFloat(hit.lat),
+    longitude: parseFloat(hit.lon),
+    display: hit.display_name,
   };
 }
 
